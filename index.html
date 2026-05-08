@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#050d1a">
+<title>StaffettaPRO — Ottimizzatore Staffette</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg: #050d1a;
+  --bg2: #091525;
+  --bg3: #0d1e35;
+  --card: #0f2340;
+  --card2: #152b4d;
+  --pool: #0a4a6e;
+  --wave: #0d6ea0;
+  --gold: #f5c842;
+  --gold2: #e0b030;
+  --gold-dim: rgba(245,200,66,0.12);
+  --silver: #a8c4d4;
+  --bronze: #cd8c52;
+  --cyan: #22d4f0;
+  --cyan-dim: rgba(34,212,240,0.1);
+  --red: #ff4d6a;
+  --red-dim: rgba(255,77,106,0.12);
+  --green: #2ecc8a;
+  --green-dim: rgba(46,204,138,0.1);
+  --text: #e8f4ff;
+  --text2: #7aa8c8;
+  --text3: #3d6480;
+  --border: rgba(34,212,240,0.12);
+  --radius: 14px;
+  --radius-sm: 9px;
+  --shadow: 0 8px 40px rgba(0,0,0,0.5);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Water background */
+body::before {
+  content:'';
+  position:fixed; inset:0; z-index:0;
+  background:
+    radial-gradient(ellipse 100% 60% at 50% -20%, rgba(13,110,160,0.2) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 40% at 10% 80%, rgba(34,212,240,0.05) 0%, transparent 60%),
+    repeating-linear-gradient(180deg, transparent 0px, transparent 38px, rgba(34,212,240,0.015) 38px, rgba(34,212,240,0.015) 40px);
+  pointer-events:none;
+}
+
+/* HEADER */
+.header {
+  position:sticky; top:0; z-index:100;
+  background: rgba(5,13,26,0.92);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 16px;
+  height: 58px;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.header-logo {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 22px; font-weight:800; letter-spacing:1px;
+  color: var(--cyan);
+  display:flex; align-items:center; gap:8px;
+}
+.header-logo .pro { color: var(--gold); font-size:13px; }
+.sync-dot { width:7px; height:7px; border-radius:50%; background:var(--text3); transition:background 0.3s; }
+.sync-dot.online { background:var(--green); box-shadow:0 0 6px var(--green); }
+.sync-dot.syncing { background:var(--gold); animation:pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* NAV */
+.nav {
+  display:flex; background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  overflow-x:auto; scrollbar-width:none;
+  position:sticky; top:58px; z-index:99;
+}
+.nav::-webkit-scrollbar { display:none; }
+.nav-btn {
+  flex:1; min-width:72px; padding:11px 6px 9px;
+  background:none; border:none; cursor:pointer;
+  color:var(--text3); font-family:'DM Sans',sans-serif;
+  font-size:10px; font-weight:500;
+  display:flex; flex-direction:column; align-items:center; gap:3px;
+  border-bottom:2px solid transparent; transition:all 0.2s;
+}
+.nav-btn.active { color:var(--cyan); border-bottom-color:var(--cyan); }
+.nav-btn svg { opacity:0.5; transition:opacity 0.2s; }
+.nav-btn.active svg { opacity:1; }
+
+/* MAIN */
+.main { padding:16px; max-width:620px; margin:0 auto; position:relative; z-index:1; }
+
+/* SECTION TITLE */
+.sec-title {
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:13px; letter-spacing:3px; text-transform:uppercase;
+  color:var(--text3); margin-bottom:12px;
+}
+
+/* CARDS */
+.card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--radius); padding:16px; margin-bottom:12px;
+  position:relative; overflow:hidden;
+}
+.card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background:linear-gradient(90deg, var(--cyan), transparent);
+}
+
+/* FORM */
+.form-group { margin-bottom:14px; }
+.form-label { font-size:11px; color:var(--text2); margin-bottom:5px; display:block; letter-spacing:0.5px; }
+.form-input, .form-select {
+  width:100%; padding:11px 13px;
+  background:var(--bg3); border:1px solid var(--border);
+  border-radius:var(--radius-sm); color:var(--text);
+  font-family:'DM Sans',sans-serif; font-size:14px;
+  transition:border-color 0.2s; outline:none;
+  -webkit-appearance:none;
+}
+.form-input:focus, .form-select:focus { border-color:var(--cyan); }
+.form-select option { background:var(--card); }
+.form-row { display:grid; gap:10px; }
+.form-row-2 { grid-template-columns:1fr 1fr; }
+.form-row-3 { grid-template-columns:1fr 1fr 1fr; }
+.form-row-4 { grid-template-columns:1fr 1fr 1fr 1fr; }
+
+/* TEMPO INPUT */
+.tempo-wrap {
+  background:var(--bg3); border:1px solid var(--border);
+  border-radius:var(--radius-sm); padding:8px 12px;
+  display:flex; align-items:center; gap:6px;
+  transition:border-color 0.2s;
+}
+.tempo-wrap:focus-within { border-color:var(--cyan); }
+.tempo-field {
+  width:44px; text-align:center;
+  background:none; border:none; outline:none;
+  color:var(--text); font-family:'Barlow Condensed',sans-serif;
+  font-size:20px; font-weight:600; padding:2px;
+}
+.tempo-field::placeholder { color:var(--text3); font-size:16px; }
+.tempo-sep { color:var(--text3); font-size:18px; font-weight:700; }
+.tempo-label { font-size:9px; color:var(--text3); text-align:center; margin-top:2px; }
+.tempo-col { display:flex; flex-direction:column; align-items:center; }
+.tempo-result {
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:13px; color:var(--cyan); margin-left:auto;
+  white-space:nowrap; font-weight:600;
+}
+
+/* BUTTONS */
+.btn {
+  display:inline-flex; align-items:center; justify-content:center; gap:7px;
+  padding:11px 18px; border-radius:var(--radius-sm);
+  border:none; cursor:pointer;
+  font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600;
+  transition:all 0.2s; width:100%;
+}
+.btn-primary { background:var(--cyan); color:#050d1a; }
+.btn-primary:active { background:#1ab8d0; transform:scale(0.98); }
+.btn-gold { background:var(--gold); color:#050d1a; }
+.btn-gold:active { background:var(--gold2); transform:scale(0.98); }
+.btn-secondary { background:var(--card2); color:var(--text); border:1px solid var(--border); }
+.btn-danger { background:var(--red-dim); color:var(--red); border:1px solid rgba(255,77,106,0.2); }
+.btn-sm { padding:7px 12px; font-size:12px; width:auto; }
+.btn-icon { padding:8px; border-radius:var(--radius-sm); background:var(--card2); border:1px solid var(--border); cursor:pointer; color:var(--text2); display:inline-flex; }
+
+/* ATLETA CARD */
+.atleta-item {
+  background:var(--bg3); border:1px solid var(--border);
+  border-radius:var(--radius-sm); padding:12px 14px;
+  display:flex; align-items:center; gap:10px; margin-bottom:8px;
+  transition:border-color 0.2s;
+}
+.atleta-item:hover { border-color:rgba(34,212,240,0.25); }
+.atleta-avatar {
+  width:36px; height:36px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight:800;
+}
+.atleta-avatar.m { background:rgba(34,212,240,0.15); color:var(--cyan); }
+.atleta-avatar.f { background:rgba(245,200,66,0.15); color:var(--gold); }
+.atleta-info { flex:1; min-width:0; }
+.atleta-name { font-size:14px; font-weight:600; color:var(--text); }
+.atleta-meta { font-size:11px; color:var(--text3); margin-top:2px; }
+.atleta-tempi { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+.tempo-chip {
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:11px; padding:2px 8px; border-radius:20px;
+  background:var(--cyan-dim); color:var(--cyan);
+  border:1px solid rgba(34,212,240,0.2);
+}
+.tempo-chip.sl { background:var(--cyan-dim); color:var(--cyan); border-color:rgba(34,212,240,0.2); }
+.tempo-chip.do { background:rgba(168,196,212,0.1); color:var(--silver); border-color:rgba(168,196,212,0.2); }
+.tempo-chip.ra { background:var(--green-dim); color:var(--green); border-color:rgba(46,204,138,0.2); }
+.tempo-chip.fa { background:var(--gold-dim); color:var(--gold); border-color:rgba(245,200,66,0.2); }
+
+/* STAFFETTA CONFIGURATORE */
+.config-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
+/* RISULTATO STAFFETTA */
+.result-card {
+  border-radius:var(--radius); padding:16px; margin-bottom:10px;
+  position:relative; overflow:hidden;
+}
+.result-card.gold {
+  background:linear-gradient(135deg, rgba(245,200,66,0.12), rgba(245,200,66,0.04));
+  border:1px solid rgba(245,200,66,0.3);
+}
+.result-card.silver {
+  background:linear-gradient(135deg, rgba(168,196,212,0.1), rgba(168,196,212,0.03));
+  border:1px solid rgba(168,196,212,0.2);
+}
+.result-card.bronze {
+  background:linear-gradient(135deg, rgba(205,140,82,0.1), rgba(205,140,82,0.03));
+  border:1px solid rgba(205,140,82,0.2);
+}
+.result-medal {
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:11px; letter-spacing:2px; text-transform:uppercase;
+  margin-bottom:8px; display:flex; align-items:center; gap:8px;
+}
+.result-medal.gold { color:var(--gold); }
+.result-medal.silver { color:var(--silver); }
+.result-medal.bronze { color:var(--bronze); }
+.result-time {
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:32px; font-weight:800; line-height:1;
+  margin-bottom:10px;
+}
+.result-time.gold { color:var(--gold); }
+.result-time.silver { color:var(--silver); }
+.result-time.bronze { color:var(--bronze); }
+.result-frazioni { display:flex; flex-direction:column; gap:6px; }
+.frazione-row {
+  display:flex; align-items:center; gap:10px;
+  background:rgba(0,0,0,0.2); border-radius:var(--radius-sm);
+  padding:8px 12px;
+}
+.frazione-pos {
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:18px; font-weight:800; color:var(--text3);
+  width:20px; flex-shrink:0;
+}
+.frazione-stile {
+  font-size:10px; letter-spacing:1px; text-transform:uppercase;
+  padding:2px 7px; border-radius:10px; flex-shrink:0;
+}
+.frazione-stile.sl { background:var(--cyan-dim); color:var(--cyan); }
+.frazione-stile.do { background:rgba(168,196,212,0.1); color:var(--silver); }
+.frazione-stile.ra { background:var(--green-dim); color:var(--green); }
+.frazione-stile.fa { background:var(--gold-dim); color:var(--gold); }
+.frazione-nome { flex:1; font-size:13px; color:var(--text); }
+.frazione-sesso { font-size:10px; color:var(--text3); }
+.frazione-tempo {
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:16px; font-weight:700; color:var(--text);
+}
+
+/* POOL LANE VISUAL */
+.lane-visual {
+  display:flex; gap:3px; margin-bottom:12px; height:8px;
+}
+.lane-seg { flex:1; border-radius:2px; }
+.lane-seg.gold-c { background:var(--gold); }
+.lane-seg.silver-c { background:var(--silver); }
+.lane-seg.bronze-c { background:var(--bronze); }
+
+/* MODAL */
+.modal-overlay {
+  position:fixed; inset:0; z-index:300;
+  background:rgba(0,0,0,0.8); backdrop-filter:blur(8px);
+  display:flex; align-items:flex-end; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity 0.3s;
+}
+.modal-overlay.open { opacity:1; pointer-events:all; }
+.modal {
+  background:var(--bg2); border:1px solid var(--border);
+  border-radius:var(--radius) var(--radius) 0 0;
+  width:100%; max-width:620px; padding:20px 16px 36px;
+  transform:translateY(100%);
+  transition:transform 0.35s cubic-bezier(0.34,1.1,0.64,1);
+  max-height:90vh; overflow-y:auto;
+}
+.modal-overlay.open .modal { transform:translateY(0); }
+.modal-handle { width:36px; height:4px; background:var(--text3); border-radius:2px; margin:0 auto 18px; }
+.modal-title {
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:20px; font-weight:800; color:var(--cyan); margin-bottom:16px; letter-spacing:0.5px;
+}
+
+/* CHIP SELEZIONE */
+.chip-group { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
+.chip-sel {
+  padding:6px 14px; border-radius:20px; font-size:12px; font-weight:600;
+  border:1px solid var(--border); background:var(--bg3);
+  color:var(--text2); cursor:pointer; transition:all 0.2s;
+  font-family:'DM Sans',sans-serif;
+}
+.chip-sel.active { background:var(--cyan-dim); border-color:var(--cyan); color:var(--cyan); }
+.chip-sel.gold-sel.active { background:var(--gold-dim); border-color:var(--gold); color:var(--gold); }
+
+/* TOAST */
+.toast {
+  position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(16px);
+  background:var(--card2); border:1px solid var(--border);
+  border-radius:var(--radius-sm); padding:9px 16px;
+  font-size:13px; color:var(--text); z-index:400;
+  opacity:0; transition:all 0.3s; white-space:nowrap; pointer-events:none;
+}
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+.toast.success { border-color:rgba(46,204,138,0.4); color:var(--green); }
+.toast.error { border-color:rgba(255,77,106,0.4); color:var(--red); }
+
+/* FAB */
+.fab {
+  position:fixed; bottom:22px; right:16px; z-index:200;
+  width:54px; height:54px; border-radius:50%;
+  background:var(--cyan); border:none; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 4px 24px rgba(34,212,240,0.35);
+  transition:all 0.2s;
+}
+.fab:active { transform:scale(0.92); }
+.fab svg { color:#050d1a; }
+
+/* EMPTY STATE */
+.empty {
+  text-align:center; padding:40px 20px; color:var(--text3);
+}
+.empty svg { opacity:0.2; margin-bottom:10px; }
+.empty p { font-size:13px; }
+
+/* SETUP */
+.setup-screen {
+  position:fixed; inset:0; z-index:500; background:var(--bg);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:20px;
+}
+.setup-logo {
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:42px; font-weight:800; color:var(--cyan); letter-spacing:2px;
+  margin-bottom:4px;
+}
+.setup-logo span { color:var(--gold); }
+.setup-sub { font-size:13px; color:var(--text3); margin-bottom:36px; text-align:center; }
+.setup-box { width:100%; max-width:400px; }
+
+.divider { height:1px; background:var(--border); margin:14px 0; }
+
+/* CONFIRM */
+.confirm-dialog {
+  position:fixed; inset:0; z-index:600;
+  background:rgba(0,0,0,0.85); backdrop-filter:blur(8px);
+  display:flex; align-items:center; justify-content:center; padding:20px;
+  opacity:0; pointer-events:none; transition:opacity 0.2s;
+}
+.confirm-dialog.open { opacity:1; pointer-events:all; }
+.confirm-box {
+  background:var(--bg2); border:1px solid var(--border);
+  border-radius:var(--radius); padding:22px; width:100%; max-width:320px; text-align:center;
+}
+.confirm-title { font-size:16px; color:var(--text); margin-bottom:6px; font-weight:600; }
+.confirm-sub { font-size:13px; color:var(--text3); margin-bottom:18px; }
+.confirm-actions { display:flex; gap:8px; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width:3px; }
+::-webkit-scrollbar-thumb { background:var(--text3); border-radius:2px; }
+
+/* page */
+.page { display:none; }
+.page.active { display:block; }
+
+/* spinner */
+.spinner { width:18px; height:18px; border-radius:50%; border:2px solid var(--border); border-top-color:var(--cyan); animation:spin 0.7s linear infinite; display:inline-block; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* alert */
+.alert { padding:10px 13px; border-radius:var(--radius-sm); font-size:12px; margin-bottom:12px; }
+.alert-info { background:var(--cyan-dim); border:1px solid rgba(34,212,240,0.2); color:var(--cyan); }
+.alert-warn { background:var(--gold-dim); border:1px solid rgba(245,200,66,0.2); color:var(--gold); }
+</style>
+</head>
+<body>
+
+<!-- SETUP -->
+<div class="setup-screen" id="setupScreen">
+  <div class="setup-logo">Staffetta<span>PRO</span></div>
+  <div class="setup-sub">Ottimizzatore staffette — FIN 2025/2026</div>
+  <div class="setup-box">
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:14px;">
+      <div style="font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Firebase (sync multi-dispositivo)</div>
+      <div class="form-group">
+        <label class="form-label">API Key</label>
+        <input class="form-input" id="fbApiKey" placeholder="AIzaSy..." />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Auth Domain</label>
+        <input class="form-input" id="fbAuthDomain" placeholder="progetto.firebaseapp.com" />
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label">Project ID</label>
+        <input class="form-input" id="fbProjectId" placeholder="il-mio-progetto" />
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="initFirebase()" style="margin-bottom:8px;">
+      <span id="initTxt">Connetti Firebase</span>
+      <span id="initSpin" class="spinner" style="display:none;"></span>
+    </button>
+    <button class="btn btn-secondary" onclick="useLocal()">Usa in locale</button>
+    <div id="fbErr" class="alert alert-warn" style="display:none;margin-top:10px;"></div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-logo">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 17l4-8 4 4 3-6 4 10"/><line x1="3" y1="20" x2="21" y2="20"/></svg>
+    Staffetta<span class="pro">PRO</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);">
+    <div class="sync-dot" id="syncDot"></div>
+    <span id="syncTxt">—</span>
+  </div>
+</div>
+
+<!-- NAV -->
+<div class="nav">
+  <button class="nav-btn active" data-page="atleti" onclick="navigate('atleti')">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a8.38 8.38 0 0 1 13 0"/></svg>
+    Atleti
+  </button>
+  <button class="nav-btn" data-page="staffetta" onclick="navigate('staffetta')">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+    Configura
+  </button>
+  <button class="nav-btn" data-page="risultati" onclick="navigate('risultati')">
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+    Risultati
+  </button>
+</div>
+
+<!-- PAGES -->
+<div class="main">
+
+  <!-- ATLETI -->
+  <div class="page active" id="page-atleti">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div class="sec-title" style="margin:0;">Roster Atleti</div>
+      <button class="btn btn-primary btn-sm" onclick="openModal('modalAtleta');resetAtletaForm()">+ Atleta</button>
+    </div>
+    <div id="atletiList">
+      <div class="empty">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a8.38 8.38 0 0 1 13 0"/></svg>
+        <p>Nessun atleta inserito</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIGURA STAFFETTA -->
+  <div class="page" id="page-staffetta">
+    <div class="sec-title">Configurazione Staffetta</div>
+
+    <div class="card">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;font-weight:600;">TIPO STAFFETTA</div>
+      <div class="chip-group" id="chipTipoStaffetta">
+        <div class="chip-sel active" data-val="SL" onclick="selChip('chipTipoStaffetta',this)">Stile Libero</div>
+        <div class="chip-sel" data-val="MX" onclick="selChip('chipTipoStaffetta',this)">Mista (DO-RA-FA-SL)</div>
+      </div>
+
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;font-weight:600;">VASCA</div>
+      <div class="chip-group" id="chipVasca">
+        <div class="chip-sel active" data-val="25" onclick="selChip('chipVasca',this)">Vasca 25m</div>
+        <div class="chip-sel" data-val="50" onclick="selChip('chipVasca',this)">Vasca 50m</div>
+      </div>
+
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;font-weight:600;">DISTANZA FRAZIONE</div>
+      <div class="chip-group" id="chipDistanza">
+        <div class="chip-sel active" data-val="50" onclick="selChip('chipDistanza',this)">4×50m</div>
+        <div class="chip-sel" data-val="100" onclick="selChip('chipDistanza',this)">4×100m</div>
+        <div class="chip-sel" data-val="200" onclick="selChip('chipDistanza',this)">4×200m</div>
+      </div>
+
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;font-weight:600;">CATEGORIA</div>
+      <div class="chip-group" id="chipCategoria">
+        <div class="chip-sel active" data-val="eso_a" onclick="selChip('chipCategoria',this)">Esordienti A</div>
+        <div class="chip-sel" data-val="eso_b" onclick="selChip('chipCategoria',this)">Esordienti B</div>
+        <div class="chip-sel" data-val="ragazzi" onclick="selChip('chipCategoria',this)">Ragazzi</div>
+        <div class="chip-sel" data-val="juniores" onclick="selChip('chipCategoria',this)">Juniores</div>
+        <div class="chip-sel" data-val="cadetti" onclick="selChip('chipCategoria',this)">Cadetti</div>
+        <div class="chip-sel" data-val="assoluti" onclick="selChip('chipCategoria',this)">Assoluti</div>
+        <div class="chip-sel" data-val="master" onclick="selChip('chipCategoria',this);toggleMasterOptions(true)">Master</div>
+      </div>
+
+      <!-- MASTER OPTIONS -->
+      <div id="masterOptions" style="display:none;">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:10px;font-weight:600;">FASCIA MASTER (somma età minima)</div>
+        <div class="chip-group" id="chipMaster">
+          <div class="chip-sel gold-sel active" data-val="100" onclick="selChip('chipMaster',this)">M100</div>
+          <div class="chip-sel gold-sel" data-val="120" onclick="selChip('chipMaster',this)">M120</div>
+          <div class="chip-sel gold-sel" data-val="160" onclick="selChip('chipMaster',this)">M160</div>
+          <div class="chip-sel gold-sel" data-val="200" onclick="selChip('chipMaster',this)">M200</div>
+          <div class="chip-sel gold-sel" data-val="240" onclick="selChip('chipMaster',this)">M240</div>
+          <div class="chip-sel gold-sel" data-val="280" onclick="selChip('chipMaster',this)">M280</div>
+          <div class="chip-sel gold-sel" data-val="320" onclick="selChip('chipMaster',this)">M320</div>
+        </div>
+      </div>
+
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;font-weight:600;">COMPOSIZIONE SESSO</div>
+      <div class="chip-group" id="chipSesso">
+        <div class="chip-sel active" data-val="M" onclick="selChip('chipSesso',this)">Solo Maschi</div>
+        <div class="chip-sel" data-val="F" onclick="selChip('chipSesso',this)">Solo Femmine</div>
+        <div class="chip-sel" data-val="MX" onclick="selChip('chipSesso',this)">Mista 2M+2F</div>
+      </div>
+    </div>
+
+    <div id="staffettaWarning" class="alert alert-warn" style="display:none;"></div>
+
+    <button class="btn btn-gold" onclick="calcolaStaffetta()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Calcola Migliori 3 Formazioni
+    </button>
+  </div>
+
+  <!-- RISULTATI -->
+  <div class="page" id="page-risultati">
+    <div class="sec-title">Formazioni Ottimali</div>
+    <div id="risultatiContent">
+      <div class="empty">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+        <p>Configura e calcola una staffetta per vedere i risultati</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- FAB (solo su atleti) -->
+<button class="fab" id="fab" onclick="openModal('modalAtleta');resetAtletaForm()">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+</button>
+
+<!-- MODAL ATLETA -->
+<div class="modal-overlay" id="modalAtleta">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modalAtletaTitle">Nuovo Atleta</div>
+
+    <input type="hidden" id="editAtletaId" value="" />
+
+    <div class="form-row form-row-2">
+      <div class="form-group">
+        <label class="form-label">Nome</label>
+        <input class="form-input" id="atletaNome" placeholder="Nome" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cognome</label>
+        <input class="form-input" id="atletaCognome" placeholder="Cognome" />
+      </div>
+    </div>
+
+    <div class="form-row form-row-2">
+      <div class="form-group">
+        <label class="form-label">Data di nascita</label>
+        <input class="form-input" type="date" id="atletaDOB" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Sesso</label>
+        <select class="form-select" id="atletaSesso">
+          <option value="M">Maschio</option>
+          <option value="F">Femmina</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:12px;font-weight:600;">TEMPI (min | sec | cent)</div>
+
+    <!-- Per ogni stile × vasca × distanza -->
+    <div id="tempiForm"></div>
+
+    <button class="btn btn-primary" style="margin-top:4px;" onclick="salvaAtleta()">Salva Atleta</button>
+    <div style="margin-top:8px;"><button class="btn btn-secondary" onclick="closeModal('modalAtleta')">Annulla</button></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- CONFIRM -->
+<div class="confirm-dialog" id="confirmDialog">
+  <div class="confirm-box">
+    <div class="confirm-title" id="confirmTitle">Sei sicuro?</div>
+    <div class="confirm-sub" id="confirmSub"></div>
+    <div class="confirm-actions">
+      <button class="btn btn-secondary" style="flex:1;" onclick="closeConfirm()">Annulla</button>
+      <button class="btn btn-danger" style="flex:1;" id="confirmOk">Elimina</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+
+// ========================
+// COSTANTI FIN
+// ========================
+const CATEGORIE_FIN = {
+  eso_b:    { label:'Esordienti B',  anni:[2016,2017], master:false },
+  eso_a:    { label:'Esordienti A',  anni:[2014,2015], master:false },
+  ragazzi:  { label:'Ragazzi',       anni:[2012,2013], master:false },
+  cadetti:  { label:'Cadetti',       anni:[2010,2011], master:false },
+  juniores: { label:'Juniores',      anni:[2008,2011], master:false },
+  assoluti: { label:'Assoluti',      anni:[null,2007],  master:false },
+  master:   { label:'Master',        anni:[null,null],  master:true, etaMin:25 },
+};
+
+// Master FIN: staffette per somma età (fascia = multipli di 20 a partire da 100)
+// M100=100-119, M120=120-139, ecc.
+const MASTER_FASCE = [100,120,160,200,240,280,320];
+
+const STILI_MX = ['do','ra','fa','sl'];
+const STILI_SL = ['sl'];
+const STILE_LABEL = { sl:'SL', do:'DO', ra:'RA', fa:'FA' };
+const STILE_FULL  = { sl:'Stile Libero', do:'Dorso', ra:'Rana', fa:'Farfalla' };
+
+const VASCHE  = ['25','50'];
+const DISTANZE = ['50','100','200'];
+
+// ========================
+// STATE
+// ========================
+let db = null, localMode = false;
+let state = { atleti: [], lastUpdate: null };
+
+// ========================
+// FIREBASE
+// ========================
+window.initFirebase = async function() {
+  const ak = document.getElementById('fbApiKey').value.trim();
+  const ad = document.getElementById('fbAuthDomain').value.trim();
+  const pid = document.getElementById('fbProjectId').value.trim();
+  if (!ak||!ad||!pid) { showFbErr('Compila tutti i campi'); return; }
+  document.getElementById('initTxt').textContent = 'Connessione...';
+  document.getElementById('initSpin').style.display = 'inline-block';
+  try {
+    const app = initializeApp({ apiKey:ak, authDomain:ad, projectId:pid });
+    db = getFirestore(app);
+    const snap = await getDoc(doc(db,'staffetta','main'));
+    if (snap.exists()) state = { ...state, ...snap.data() };
+    localStorage.setItem('spConfig', JSON.stringify({ak,ad,pid}));
+    startSync();
+    setSyncStatus('online');
+    hideSetup();
+  } catch(e) {
+    showFbErr('Errore: ' + e.message);
+    document.getElementById('initTxt').textContent = 'Connetti Firebase';
+    document.getElementById('initSpin').style.display = 'none';
+  }
+};
+
+window.useLocal = function() {
+  localMode = true;
+  const s = localStorage.getItem('spState');
+  if (s) try { state = { ...state, ...JSON.parse(s) }; } catch(e){}
+  setSyncStatus('offline');
+  hideSetup();
+};
+
+function hideSetup() {
+  document.getElementById('setupScreen').style.display = 'none';
+  buildTempiForm();
+  renderAtleti();
+}
+
+async function saveState() {
+  state.lastUpdate = new Date().toISOString();
+  if (db && !localMode) {
+    setSyncStatus('syncing');
+    try {
+      await setDoc(doc(db,'staffetta','main'), JSON.parse(JSON.stringify(state)));
+      setSyncStatus('online');
+    } catch(e) { setSyncStatus('offline'); localStorage.setItem('spState', JSON.stringify(state)); }
+  } else {
+    localStorage.setItem('spState', JSON.stringify(state));
+  }
+}
+
+function startSync() {
+  if (!db || localMode) return;
+  onSnapshot(doc(db,'staffetta','main'), snap => {
+    if (snap.exists()) {
+      const r = snap.data();
+      if (!state.lastUpdate || r.lastUpdate > state.lastUpdate) {
+        state = { ...state, ...r };
+        renderAtleti();
+      }
+    }
+  });
+}
+
+function setSyncStatus(s) {
+  const d = document.getElementById('syncDot');
+  const t = document.getElementById('syncTxt');
+  d.className = 'sync-dot ' + s;
+  t.textContent = s === 'online' ? 'Sync' : s === 'syncing' ? 'Salvo...' : s === 'offline' ? 'Locale' : '—';
+}
+
+function showFbErr(m) {
+  const el = document.getElementById('fbErr');
+  el.textContent = m; el.style.display = 'block';
+}
+
+// Auto-load
+(async function() {
+  const cfg = localStorage.getItem('spConfig');
+  if (cfg) {
+    try {
+      const {ak,ad,pid} = JSON.parse(cfg);
+      document.getElementById('fbApiKey').value = ak||'';
+      document.getElementById('fbAuthDomain').value = ad||'';
+      document.getElementById('fbProjectId').value = pid||'';
+      const app = initializeApp({apiKey:ak,authDomain:ad,projectId:pid});
+      db = getFirestore(app);
+      const snap = await getDoc(doc(db,'staffetta','main'));
+      if (snap.exists()) state = { ...state, ...snap.data() };
+      setSyncStatus('online');
+      startSync();
+      hideSetup();
+      return;
+    } catch(e) {}
+  }
+  const ls = localStorage.getItem('spState');
+  if (ls) {
+    try { state = { ...state, ...JSON.parse(ls) }; } catch(e){}
+    localMode = true;
+    setSyncStatus('offline');
+    hideSetup();
+  }
+})();
+
+// ========================
+// FORM TEMPI
+// ========================
+function buildTempiForm() {
+  const c = document.getElementById('tempiForm');
+  if (!c) return;
+  let html = '';
+  VASCHE.forEach(v => {
+    DISTANZE.forEach(d => {
+      html += `<div style="margin-bottom:14px;">
+        <div style="font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">
+          Vasca ${v}m — ${d}m
+        </div>`;
+      const stili = ['sl','do','ra','fa'];
+      stili.forEach(s => {
+        const key = `${s}_${v}_${d}`;
+        html += `
+        <div style="margin-bottom:8px;">
+          <div style="font-size:11px;color:var(--text2);margin-bottom:4px;">${STILE_FULL[s]}</div>
+          <div class="tempo-wrap">
+            <div class="tempo-col">
+              <input class="tempo-field" id="t_min_${key}" type="number" min="0" max="59" placeholder="00" maxlength="2"
+                oninput="updateTempoDisplay('${key}')" />
+              <div class="tempo-label">MIN</div>
+            </div>
+            <div class="tempo-sep">:</div>
+            <div class="tempo-col">
+              <input class="tempo-field" id="t_sec_${key}" type="number" min="0" max="59" placeholder="00" maxlength="2"
+                oninput="updateTempoDisplay('${key}')" />
+              <div class="tempo-label">SEC</div>
+            </div>
+            <div class="tempo-sep">.</div>
+            <div class="tempo-col">
+              <input class="tempo-field" id="t_cs_${key}" type="number" min="0" max="99" placeholder="00" maxlength="2"
+                oninput="updateTempoDisplay('${key}')" />
+              <div class="tempo-label">CENT</div>
+            </div>
+            <div class="tempo-result" id="t_res_${key}">—</div>
+          </div>
+        </div>`;
+      });
+      html += '</div>';
+    });
+  });
+  c.innerHTML = html;
+}
+
+window.updateTempoDisplay = function(key) {
+  const min = parseInt(document.getElementById(`t_min_${key}`)?.value) || 0;
+  const sec = parseInt(document.getElementById(`t_sec_${key}`)?.value) || 0;
+  const cs  = parseInt(document.getElementById(`t_cs_${key}`)?.value) || 0;
+  const el  = document.getElementById(`t_res_${key}`);
+  if (!el) return;
+  const tot = min*6000 + sec*100 + cs;
+  el.textContent = tot > 0 ? formatTempo(tot) : '—';
+};
+
+// ========================
+// ATLETI
+// ========================
+window.resetAtletaForm = function() {
+  document.getElementById('editAtletaId').value = '';
+  document.getElementById('modalAtletaTitle').textContent = 'Nuovo Atleta';
+  document.getElementById('atletaNome').value = '';
+  document.getElementById('atletaCognome').value = '';
+  document.getElementById('atletaDOB').value = '';
+  document.getElementById('atletaSesso').value = 'M';
+  // Clear tempi
+  VASCHE.forEach(v => DISTANZE.forEach(d => ['sl','do','ra','fa'].forEach(s => {
+    const key = `${s}_${v}_${d}`;
+    const mi = document.getElementById(`t_min_${key}`);
+    const se = document.getElementById(`t_sec_${key}`);
+    const cs = document.getElementById(`t_cs_${key}`);
+    const re = document.getElementById(`t_res_${key}`);
+    if (mi) mi.value = '';
+    if (se) se.value = '';
+    if (cs) cs.value = '';
+    if (re) re.textContent = '—';
+  })));
+};
+
+window.editAtleta = function(id) {
+  const a = (state.atleti||[]).find(x=>x.id===id);
+  if (!a) return;
+  document.getElementById('editAtletaId').value = id;
+  document.getElementById('modalAtletaTitle').textContent = 'Modifica Atleta';
+  document.getElementById('atletaNome').value = a.nome||'';
+  document.getElementById('atletaCognome').value = a.cognome||'';
+  document.getElementById('atletaDOB').value = a.dob||'';
+  document.getElementById('atletaSesso').value = a.sesso||'M';
+  // Fill tempi
+  VASCHE.forEach(v => DISTANZE.forEach(d => ['sl','do','ra','fa'].forEach(s => {
+    const key = `${s}_${v}_${d}`;
+    const val = a.tempi && a.tempi[key];
+    if (val) {
+      const min = Math.floor(val/6000);
+      const sec = Math.floor((val%6000)/100);
+      const cs  = val%100;
+      const mi = document.getElementById(`t_min_${key}`);
+      const se = document.getElementById(`t_sec_${key}`);
+      const cse = document.getElementById(`t_cs_${key}`);
+      if (mi) mi.value = min||'';
+      if (se) se.value = sec||'';
+      if (cse) cse.value = cs||'';
+      updateTempoDisplay(key);
+    } else {
+      const mi = document.getElementById(`t_min_${key}`);
+      const se = document.getElementById(`t_sec_${key}`);
+      const cse = document.getElementById(`t_cs_${key}`);
+      const re = document.getElementById(`t_res_${key}`);
+      if (mi) mi.value = '';
+      if (se) se.value = '';
+      if (cse) cse.value = '';
+      if (re) re.textContent = '—';
+    }
+  })));
+  openModal('modalAtleta');
+};
+
+window.salvaAtleta = async function() {
+  const nome = document.getElementById('atletaNome').value.trim();
+  const cognome = document.getElementById('atletaCognome').value.trim();
+  const dob = document.getElementById('atletaDOB').value;
+  const sesso = document.getElementById('atletaSesso').value;
+  if (!nome||!cognome) { showToast('Inserisci nome e cognome','error'); return; }
+  if (!dob) { showToast('Inserisci data di nascita','error'); return; }
+
+  const tempi = {};
+  VASCHE.forEach(v => DISTANZE.forEach(d => ['sl','do','ra','fa'].forEach(s => {
+    const key = `${s}_${v}_${d}`;
+    const min = parseInt(document.getElementById(`t_min_${key}`)?.value)||0;
+    const sec = parseInt(document.getElementById(`t_sec_${key}`)?.value)||0;
+    const cs  = parseInt(document.getElementById(`t_cs_${key}`)?.value)||0;
+    const tot = min*6000 + sec*100 + cs;
+    if (tot > 0) tempi[key] = tot;
+  })));
+
+  const editId = document.getElementById('editAtletaId').value;
+  if (!state.atleti) state.atleti = [];
+
+  if (editId) {
+    const idx = state.atleti.findIndex(x=>x.id===editId);
+    if (idx>=0) state.atleti[idx] = { ...state.atleti[idx], nome, cognome, dob, sesso, tempi };
+    showToast('Atleta aggiornato ✓','success');
+  } else {
+    state.atleti.push({ id:'a_'+Date.now(), nome, cognome, dob, sesso, tempi });
+    showToast('Atleta salvato ✓','success');
+  }
+
+  await saveState();
+  closeModal('modalAtleta');
+  renderAtleti();
+};
+
+window.eliminaAtleta = function(id) {
+  const a = (state.atleti||[]).find(x=>x.id===id);
+  if (!a) return;
+  openConfirm(`Elimina ${a.nome} ${a.cognome}`, 'Il dato verrà eliminato definitivamente.', async () => {
+    state.atleti = state.atleti.filter(x=>x.id!==id);
+    await saveState();
+    renderAtleti();
+    showToast('Atleta eliminato','success');
+  });
+};
+
+function renderAtleti() {
+  const c = document.getElementById('atletiList');
+  const atleti = state.atleti || [];
+  if (!atleti.length) {
+    c.innerHTML = `<div class="empty">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a8.38 8.38 0 0 1 13 0"/></svg>
+      <p>Nessun atleta. Aggiungi il primo!</p></div>`;
+    return;
+  }
+  c.innerHTML = atleti.map(a => {
+    const anno = a.dob ? new Date(a.dob).getFullYear() : '?';
+    const eta = a.dob ? calcEta(a.dob) : '?';
+    const cat = getCategoriaLabel(a.dob);
+    const nTempi = Object.keys(a.tempi||{}).length;
+    const chipsSl = ['25','50'].map(v => ['50','100','200'].map(d => {
+      const t = a.tempi && a.tempi[`sl_${v}_${d}`];
+      return t ? `<span class="tempo-chip sl">${d}SL-${v}: ${formatTempo(t)}</span>` : '';
+    }).join('')).join('');
+    return `
+    <div class="atleta-item">
+      <div class="atleta-avatar ${a.sesso==='F'?'f':'m'}">${(a.nome||'?')[0]}${(a.cognome||'?')[0]}</div>
+      <div class="atleta-info">
+        <div class="atleta-name">${a.nome} ${a.cognome}</div>
+        <div class="atleta-meta">${a.sesso} · ${anno} · ${eta} anni · ${cat} · ${nTempi} tempi</div>
+        <div class="atleta-tempi">${chipsSl||'<span style="font-size:11px;color:var(--text3)">Nessun tempo SL</span>'}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+        <button class="btn-icon btn-sm" onclick="editAtleta('${a.id}')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="btn-icon btn-sm" onclick="eliminaAtleta('${a.id}')" style="border-color:rgba(255,77,106,0.2);color:var(--red);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ========================
+// CATEGORIE E ETÀ
+// ========================
+function calcEta(dob) {
+  const oggi = new Date();
+  const n = new Date(dob);
+  let eta = oggi.getFullYear() - n.getFullYear();
+  const m = oggi.getMonth() - n.getMonth();
+  if (m < 0 || (m===0 && oggi.getDate() < n.getDate())) eta--;
+  return eta;
+}
+
+function getAnnoNascita(dob) { return dob ? new Date(dob).getFullYear() : 0; }
+
+function getCategoriaFIN(dob) {
+  if (!dob) return null;
+  const anno = getAnnoNascita(dob);
+  const eta = calcEta(dob);
+  if (anno >= 2016) return 'eso_b';
+  if (anno >= 2014) return 'eso_a';
+  if (anno >= 2012) return 'ragazzi';
+  if (anno >= 2010) return 'cadetti';
+  if (anno >= 2008) return 'juniores';
+  if (eta >= 25) return 'master';
+  return 'assoluti';
+}
+
+function getCategoriaLabel(dob) {
+  const c = getCategoriaFIN(dob);
+  return c ? (CATEGORIE_FIN[c]?.label || c) : '?';
+}
+
+// ========================
+// CALCOLO STAFFETTA
+// ========================
+window.calcolaStaffetta = function() {
+  const tipoStaffetta = getChipVal('chipTipoStaffetta'); // SL o MX
+  const vasca = getChipVal('chipVasca');
+  const distanza = getChipVal('chipDistanza');
+  const categoria = getChipVal('chipCategoria');
+  const sessoComp = getChipVal('chipSesso'); // M, F, MX
+  const masterFascia = categoria === 'master' ? parseInt(getChipVal('chipMaster')) : null;
+
+  const warn = document.getElementById('staffettaWarning');
+  warn.style.display = 'none';
+
+  // Filtra atleti per categoria
+  let pool = (state.atleti||[]).filter(a => {
+    if (!a.dob) return false;
+    const catA = getCategoriaFIN(a.dob);
+    if (categoria === 'master') return catA === 'master';
+    if (categoria === 'assoluti') return catA !== 'master'; // assoluti include tutte le cat non master
+    return catA === categoria;
+  });
+
+  // Filtra per sesso
+  if (sessoComp === 'M') pool = pool.filter(a => a.sesso === 'M');
+  else if (sessoComp === 'F') pool = pool.filter(a => a.sesso === 'F');
+  // MX: mantieni tutti, gestito dopo
+
+  // Stili da usare
+  const stili = tipoStaffetta === 'MX' ? STILI_MX : ['sl','sl','sl','sl'];
+
+  // Chiavi tempi
+  const tempoKey = (stile) => `${stile}_${vasca}_${distanza}`;
+
+  // Atleti con almeno un tempo valido per gli stili richiesti
+  const atletiConTempo = pool.filter(a => {
+    if (tipoStaffetta === 'MX') {
+      return STILI_MX.some(s => a.tempi && a.tempi[tempoKey(s)]);
+    } else {
+      return a.tempi && a.tempi[tempoKey('sl')];
+    }
+  });
+
+  if (atletiConTempo.length < 4) {
+    warn.textContent = `Atleti disponibili con tempi validi: ${atletiConTempo.length}/4 minimi. Aggiungi atleti o tempi.`;
+    warn.style.display = 'block';
+    return;
+  }
+
+  let combinazioni = [];
+
+  if (tipoStaffetta === 'SL') {
+    // Prendi i migliori N con tempo SL
+    const con_sl = atletiConTempo.filter(a => a.tempi[tempoKey('sl')]);
+
+    if (sessoComp === 'MX') {
+      // Genera combo 2M+2F
+      const maschi = con_sl.filter(a=>a.sesso==='M');
+      const femmine = con_sl.filter(a=>a.sesso==='F');
+      if (maschi.length < 2 || femmine.length < 2) {
+        warn.textContent = 'Servono almeno 2 maschi e 2 femmine con tempo SL.';
+        warn.style.display = 'block'; return;
+      }
+      const comboM = combinations(maschi, 2);
+      const comboF = combinations(femmine, 2);
+      comboM.forEach(cm => comboF.forEach(cf => {
+        const team = [...cm, ...cf];
+        if (!validaMaster(team, categoria, masterFascia)) return;
+        const frazioni = team.map(a => ({
+          atleta: a,
+          stile: 'sl',
+          tempo: a.tempi[tempoKey('sl')]
+        })).sort((a,b)=>a.tempo-b.tempo);
+        const totale = frazioni.reduce((s,f)=>s+f.tempo,0);
+        combinazioni.push({ frazioni, totale });
+      }));
+    } else {
+      // Stessa sesso
+      const combos = combinations(con_sl, 4);
+      combos.forEach(team => {
+        if (!validaMaster(team, categoria, masterFascia)) return;
+        const frazioni = team.map(a => ({
+          atleta: a, stile: 'sl',
+          tempo: a.tempi[tempoKey('sl')]
+        })).sort((a,b)=>a.tempo-b.tempo);
+        const totale = frazioni.reduce((s,f)=>s+f.tempo,0);
+        combinazioni.push({ frazioni, totale });
+      });
+    }
+  } else {
+    // MISTA DO-RA-FA-SL
+    // Per ogni stile trova gli atleti che hanno quel tempo
+    const byStile = {};
+    STILI_MX.forEach(s => {
+      byStile[s] = pool.filter(a => a.tempi && a.tempi[tempoKey(s)]);
+    });
+
+    // Genera tutte le combinazioni valide (4 atleti distinti, uno per stile)
+    // con eventuale vincolo 2M+2F
+    const stiliOrdine = STILI_MX; // DO, RA, FA, SL
+    const genCombos = (idx, usati, parziale, sessoM, sessoF) => {
+      if (idx === 4) {
+        if (sessoComp === 'MX' && (sessoM !== 2 || sessoF !== 2)) return;
+        if (!validaMaster(parziale.map(f=>f.atleta), categoria, masterFascia)) return;
+        const totale = parziale.reduce((s,f)=>s+f.tempo,0);
+        combinazioni.push({ frazioni:[...parziale], totale });
+        return;
+      }
+      const stile = stiliOrdine[idx];
+      let candidati = byStile[stile];
+      if (sessoComp === 'M') candidati = candidati.filter(a=>a.sesso==='M');
+      if (sessoComp === 'F') candidati = candidati.filter(a=>a.sesso==='F');
+      candidati.forEach(a => {
+        if (usati.has(a.id)) return;
+        if (sessoComp === 'MX') {
+          const sM = sessoM + (a.sesso==='M'?1:0);
+          const sF = sessoF + (a.sesso==='F'?1:0);
+          if (sM > 2 || sF > 2) return; // già troppi
+        }
+        usati.add(a.id);
+        parziale.push({ atleta:a, stile, tempo:a.tempi[tempoKey(stile)] });
+        genCombos(idx+1, usati, parziale,
+          sessoComp==='MX' ? sessoM+(a.sesso==='M'?1:0) : sessoM,
+          sessoComp==='MX' ? sessoF+(a.sesso==='F'?1:0) : sessoF);
+        parziale.pop();
+        usati.delete(a.id);
+      });
+    };
+    genCombos(0, new Set(), [], 0, 0);
+  }
+
+  if (!combinazioni.length) {
+    warn.textContent = 'Nessuna combinazione valida trovata con i filtri selezionati.';
+    warn.style.display = 'block'; return;
+  }
+
+  // Ordina e prendi le prime 3
+  combinazioni.sort((a,b)=>a.totale-b.totale);
+  const top3 = combinazioni.slice(0,3);
+
+  renderRisultati(top3, { tipoStaffetta, vasca, distanza, categoria, sessoComp, masterFascia });
+  navigate('risultati');
+};
+
+function validaMaster(team, categoria, fascia) {
+  if (categoria !== 'master' || fascia === null) return true;
+  const somma = team.reduce((s,a) => s + calcEta(a.dob), 0);
+  const min = fascia;
+  const max = fascia + 19;
+  return somma >= min && somma <= max;
+}
+
+function combinations(arr, k) {
+  if (k === 0) return [[]];
+  if (arr.length < k) return [];
+  const [first, ...rest] = arr;
+  const withFirst = combinations(rest, k-1).map(c => [first,...c]);
+  const withoutFirst = combinations(rest, k);
+  return [...withFirst, ...withoutFirst];
+}
+
+// ========================
+// RENDER RISULTATI
+// ========================
+function renderRisultati(top3, config) {
+  const c = document.getElementById('risultatiContent');
+  const medals = ['gold','silver','bronze'];
+  const medalLabel = ['🥇 PRIMA SCELTA','🥈 SECONDA SCELTA','🥉 TERZA SCELTA'];
+  const emoji = ['🥇','🥈','🥉'];
+
+  let html = `<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:14px;">
+    <div style="font-size:11px;color:var(--text3);letter-spacing:1px;margin-bottom:6px;">CONFIGURAZIONE CALCOLATA</div>
+    <div style="font-size:13px;color:var(--text2);">
+      ${config.tipoStaffetta==='MX'?'Staffetta Mista':'Staffetta SL'} · 
+      4×${config.distanza}m · Vasca ${config.vasca}m · 
+      ${CATEGORIE_FIN[config.categoria]?.label||config.categoria}
+      ${config.masterFascia ? ' M'+config.masterFascia : ''}
+      · ${config.sessoComp==='MX'?'2M+2F':config.sessoComp==='M'?'Soli Maschi':'Solo Femmine'}
+    </div>
+  </div>`;
+
+  top3.forEach((combo, i) => {
+    const m = medals[i];
+    const sommaEta = config.categoria === 'master'
+      ? combo.frazioni.reduce((s,f)=>s+calcEta(f.atleta.dob),0) : null;
+
+    html += `<div class="result-card ${m}">
+      <div class="lane-visual">
+        ${combo.frazioni.map(()=>`<div class="lane-seg ${m}-c"></div>`).join('')}
+      </div>
+      <div class="result-medal ${m}">${emoji[i]} ${medalLabel[i]}</div>
+      <div class="result-time ${m}">${formatTempo(combo.totale)}</div>
+      ${sommaEta !== null ? `<div style="font-size:11px;color:var(--text3);margin-bottom:10px;">Somma età: ${sommaEta} anni</div>` : ''}
+      <div class="result-frazioni">
+        ${combo.frazioni.map((f,fi) => `
+          <div class="frazione-row">
+            <div class="frazione-pos">${fi+1}</div>
+            <div class="frazione-stile ${f.stile}">${STILE_LABEL[f.stile]}</div>
+            <div>
+              <div class="frazione-nome">${f.atleta.nome} ${f.atleta.cognome}</div>
+              <div class="frazione-sesso">${f.atleta.sesso} · ${getAnnoNascita(f.atleta.dob)} · ${calcEta(f.atleta.dob)} anni</div>
+            </div>
+            <div class="frazione-tempo">${formatTempo(f.tempo)}</div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  });
+
+  c.innerHTML = html;
+}
+
+// ========================
+// CHIP HELPERS
+// ========================
+window.selChip = function(groupId, el) {
+  document.querySelectorAll(`#${groupId} .chip-sel`).forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  if (groupId === 'chipCategoria' && el.dataset.val !== 'master') {
+    toggleMasterOptions(false);
+  }
+};
+
+window.toggleMasterOptions = function(show) {
+  document.getElementById('masterOptions').style.display = show ? 'block' : 'none';
+};
+
+function getChipVal(groupId) {
+  const el = document.querySelector(`#${groupId} .chip-sel.active`);
+  return el ? el.dataset.val : null;
+}
+
+// ========================
+// UTILS
+// ========================
+function formatTempo(cs) {
+  if (!cs || cs <= 0) return '—';
+  const min = Math.floor(cs/6000);
+  const sec = Math.floor((cs%6000)/100);
+  const cent = cs%100;
+  const ss = sec.toString().padStart(2,'0');
+  const cc = cent.toString().padStart(2,'0');
+  return min > 0 ? `${min}:${ss}.${cc}` : `${sec}.${cc}`;
+}
+
+// ========================
+// NAVIGATION
+// ========================
+window.navigate = function(page) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.querySelector(`[data-page="${page}"]`).classList.add('active');
+  document.getElementById('fab').style.display = page==='atleti' ? 'flex' : 'none';
+};
+
+// ========================
+// MODALS
+// ========================
+window.openModal = function(id) { document.getElementById(id).classList.add('open'); };
+window.closeModal = function(id) { document.getElementById(id).classList.remove('open'); };
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target===el) el.classList.remove('open'); });
+});
+
+// ========================
+// CONFIRM
+// ========================
+let _confirmCb = null;
+function openConfirm(title, sub, cb) {
+  document.getElementById('confirmTitle').textContent = title;
+  document.getElementById('confirmSub').textContent = sub;
+  _confirmCb = cb;
+  document.getElementById('confirmDialog').classList.add('open');
+}
+window.closeConfirm = function() {
+  document.getElementById('confirmDialog').classList.remove('open');
+  _confirmCb = null;
+};
+document.getElementById('confirmOk').addEventListener('click', () => {
+  if (_confirmCb) _confirmCb();
+  closeConfirm();
+});
+
+// ========================
+// TOAST
+// ========================
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type + ' show';
+  setTimeout(()=>t.classList.remove('show'), 2500);
+}
+
+</script>
+</body>
+</html>
