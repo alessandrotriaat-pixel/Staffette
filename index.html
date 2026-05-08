@@ -397,6 +397,7 @@ body::before {
 .alert-info { background:var(--cyan-dim); border:1px solid rgba(34,212,240,0.2); color:var(--cyan); }
 .alert-warn { background:var(--gold-dim); border:1px solid rgba(245,200,66,0.2); color:var(--gold); }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -466,6 +467,25 @@ body::before {
       <div class="sec-title" style="margin:0;">Roster Atleti</div>
       <button class="btn btn-primary btn-sm" onclick="openModal('modalAtleta');resetAtletaForm()">+ Atleta</button>
     </div>
+
+    <!-- DROP ZONE EXCEL -->
+    <div id="dropZone"
+      style="border:2px dashed rgba(34,212,240,0.25);border-radius:var(--radius);padding:16px;margin-bottom:14px;text-align:center;background:var(--cyan-dim);cursor:pointer;transition:border-color 0.2s;"
+      onclick="document.getElementById('fileInput').click()"
+      ondragover="event.preventDefault();document.getElementById('dropZone').style.borderColor='var(--cyan)'"
+      ondragleave="document.getElementById('dropZone').style.borderColor='rgba(34,212,240,0.25)'"
+      ondrop="handleDrop(event)">
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFileInput(event)" />
+      <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+        <div style="text-align:left;">
+          <div style="font-size:13px;color:var(--cyan);font-weight:600;">Importa da Excel</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:1px;">Trascina .xlsx/.xls oppure tocca per scegliere</div>
+        </div>
+      </div>
+    </div>
+    <div id="importResult" style="display:none;margin-bottom:12px;"></div>
+
     <div id="atletiList">
       <div class="empty">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a8.38 8.38 0 0 1 13 0"/></svg>
@@ -1284,6 +1304,178 @@ function showToast(msg, type='') {
   t.className = 'toast ' + type + ' show';
   setTimeout(()=>t.classList.remove('show'), 2500);
 }
+
+// ========================
+// EXCEL IMPORT
+// ========================
+window.handleDrop = function(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').style.borderColor = 'rgba(34,212,240,0.25)';
+  const file = e.dataTransfer.files[0];
+  if (file) processExcelFile(file);
+};
+
+window.handleFileInput = function(e) {
+  const file = e.target.files[0];
+  if (file) processExcelFile(file);
+  e.target.value = '';
+};
+
+function processExcelFile(file) {
+  const resEl = document.getElementById('importResult');
+  resEl.style.display = 'block';
+  resEl.innerHTML = '<div class="alert alert-info">⏳ Lettura file in corso...</div>';
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array', cellDates: true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+      // Trova riga header (contiene "Nome" o "nome")
+      let headerRow = 0;
+      for (let i = 0; i < Math.min(rows.length, 5); i++) {
+        const r = rows[i].map(c => String(c).toLowerCase());
+        if (r.some(c => c.includes('nome'))) { headerRow = i; break; }
+      }
+
+      // Mappa colonne
+      const headers = rows[headerRow].map(c => String(c).toLowerCase().trim());
+      const colNome   = headers.findIndex(h => h.includes('nome'));
+      const colDOB    = headers.findIndex(h => h.includes('nasc') || h.includes('data'));
+      const colGara   = headers.findIndex(h => h.includes('gara'));
+      const colVasca  = headers.findIndex(h => h.includes('vasca'));
+      const colMM     = headers.findIndex(h => h === 'mm' || h === 'min');
+      const colSS     = headers.findIndex(h => h === 'ss' || h === 'sec');
+      const colCC     = headers.findIndex(h => h === 'cc' || h === 'cent');
+
+      if (colNome < 0 || colGara < 0) {
+        resEl.innerHTML = '<div class="alert alert-warn">⚠️ Struttura non riconosciuta. Verifica che il file abbia colonne Nome, Gara, Vasca, mm, ss, cc.</div>';
+        return;
+      }
+
+      // Parse righe dati
+      const dataRows = rows.slice(headerRow + 1).filter(r => r[colNome] && String(r[colNome]).trim());
+
+      let nuovi = 0, aggiornati = 0, tempiMigliorati = 0, tempiInvariati = 0;
+
+      dataRows.forEach(row => {
+        const nomeCompleto = String(row[colNome]).trim();
+        const parts = nomeCompleto.split(' ');
+        // Cerca di dividere nome e cognome — primo token = cognome (spesso), resto = nome
+        const cognome = parts[0] || nomeCompleto;
+        const nome = parts.slice(1).join(' ') || cognome;
+
+        const dobRaw = row[colDOB];
+        let dob = '';
+        if (dobRaw) {
+          if (dobRaw instanceof Date) {
+            dob = dobRaw.toISOString().split('T')[0];
+          } else {
+            const str = String(dobRaw).trim();
+            // Try dd/mm/yyyy or dd-mm-yyyy
+            const m = str.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
+            if (m) {
+              const y = m[3].length === 2 ? '20'+m[3] : m[3];
+              dob = `${y}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+            }
+          }
+        }
+
+        // Parse gara: "50 SL", "100 DO", "200 FA", "50 RA" ecc.
+        const garaStr = String(row[colGara]).trim().toUpperCase();
+        const garaMatch = garaStr.match(/(\d+)\s*(SL|DO|RA|FA|S\.L\.|DORSO|RANA|FARFALLA|STILE)/i);
+        if (!garaMatch) return;
+
+        const distanza = garaMatch[1]; // "50","100","200"
+        let stileRaw = garaMatch[2].toUpperCase();
+        const stileMap = { 'SL':'sl','S.L.':'sl','STILE':'sl','DO':'do','DORSO':'do','RA':'ra','RANA':'ra','FA':'fa','FARFALLA':'fa' };
+        const stile = stileMap[stileRaw];
+        if (!stile) return;
+        if (!['50','100','200'].includes(distanza)) return;
+
+        const vascaRaw = String(row[colVasca] || '25').trim();
+        const vasca = vascaRaw.includes('50') ? '50' : '25';
+
+        const mm = parseInt(row[colMM]) || 0;
+        const ss = parseInt(row[colSS]) || 0;
+        const cc = parseInt(row[colCC]) || 0;
+        const tempoCs = mm * 6000 + ss * 100 + cc;
+        if (tempoCs <= 0) return;
+
+        const key = `${stile}_${vasca}_${distanza}`;
+
+        // Cerca atleta esistente per nome completo
+        if (!state.atleti) state.atleti = [];
+        let atleta = state.atleti.find(a => {
+          const nFull = (a.nome + ' ' + a.cognome).toLowerCase();
+          const nFull2 = (a.cognome + ' ' + a.nome).toLowerCase();
+          const target = nomeCompleto.toLowerCase();
+          return nFull === target || nFull2 === target;
+        });
+
+        // Leggi sesso dalla colonna (M/F)
+        let sessoRiga = 'M';
+        if (colSesso >= 0) {
+          const sv = String(row[colSesso]).trim().toUpperCase();
+          if (sv === 'F' || sv === 'FEMMINA' || sv === 'FEMALE') sessoRiga = 'F';
+          else sessoRiga = 'M';
+        }
+
+        if (!atleta) {
+          // Crea nuovo atleta
+          atleta = {
+            id: 'a_' + Date.now() + '_' + Math.random().toString(36).substr(2,5),
+            nome: nome,
+            cognome: cognome,
+            dob: dob,
+            sesso: sessoRiga,
+            tempi: {}
+          };
+          state.atleti.push(atleta);
+          nuovi++;
+        } else {
+          // Aggiorna sesso se presente nel file
+          if (colSesso >= 0) atleta.sesso = sessoRiga;
+          aggiornati++;
+        }
+
+        if (!atleta.tempi) atleta.tempi = {};
+        const existing = atleta.tempi[key];
+        if (!existing || tempoCs < existing) {
+          atleta.tempi[key] = tempoCs;
+          tempiMigliorati++;
+        } else {
+          tempiInvariati++;
+        }
+      });
+
+      saveState();
+      renderAtleti();
+
+      resEl.innerHTML = `<div style="background:var(--green-dim);border:1px solid rgba(46,204,138,0.3);border-radius:var(--radius-sm);padding:12px 14px;">
+        <div style="font-size:13px;color:var(--green);font-weight:600;margin-bottom:6px;">✓ Import completato</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.8;">
+          Nuovi atleti creati: <strong>${nuovi}</strong><br>
+          Atleti aggiornati: <strong>${aggiornati}</strong><br>
+          Tempi migliorati/aggiunti: <strong>${tempiMigliorati}</strong><br>
+          Tempi invariati (già migliori): <strong>${tempiInvariati}</strong>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:8px;">✓ Sesso letto automaticamente dal file · Verifica eventuali atleti senza colonna sesso</div>
+      </div>`;
+
+      setTimeout(() => { resEl.style.display = 'none'; }, 8000);
+      showToast('Import completato ✓', 'success');
+
+    } catch(err) {
+      resEl.innerHTML = `<div class="alert alert-warn">⚠️ Errore lettura file: ${err.message}</div>`;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
 
 </script>
 </body>
